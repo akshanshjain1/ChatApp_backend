@@ -4,10 +4,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "SET NODE_ENV=PRODUCTION && node dist/app.js",
+    "start": "node dist/app.js",
     "build": "tsc",
     "watch": "tsc -w",
-    "dev": "SET NODE_ENV=PRODUCTION && nodemon dist/app.js"
+    "dev": "nodemon dist/app.js"
   },
   "keywords": [],
   "author": "",
