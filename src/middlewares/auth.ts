@@ -41,7 +41,7 @@ const adminonly=Trycatch(async(req:Request,res:Response,next:NextFunction)=>{
 const socketauthenticator=async(err:any,socket:Socket,next: (err?: ExtendedError) => void)=>{
     try {
         if(err) return next(err);
-        const authtoken=socket.request?.cookies?.accesstoken;
+        const authtoken=socket?.request?.cookies?.accesstoken;
         if(!authtoken)
             return next(new Errorhandler("Please Login to access",401))
         const decodedtoken=jwt.verify(authtoken,process.env.JWT_SECRET||"") as CustomJWTPayload;
