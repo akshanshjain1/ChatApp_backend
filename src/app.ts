@@ -51,7 +51,7 @@ app.use('/api/v1/user', userrouter)
 app.use('/api/v1/chat', chatrouter)
 app.use('/api/v1/admin',adminrouter)
 io.use((socket:Socket,next: (err?: ExtendedError) => void)=>{
-   const req=socket.request ;
+   const req=socket?.request ;
    const res:Response<any, Record<string, any>>={} as Response<any, Record<string, any>>
    
     cookieParser()(req as any,res,async(err)=>{

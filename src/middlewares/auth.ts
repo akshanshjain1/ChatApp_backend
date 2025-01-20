@@ -13,8 +13,8 @@ interface CustomJWTPayload extends JwtPayload{
     _id:string  
 }
 const isauthenticated=Trycatch(async(req:Request,res:Response,next:NextFunction)=>{
-    const accesstoken=req.cookies["accesstoken"]
-    
+    const accesstoken=req?.cookies["accesstoken"]
+   
     if(!accesstoken)
         return next(new Errorhandler('Please Login',401))
     
@@ -48,7 +48,8 @@ const socketauthenticator=async(err:any,socket:Socket,next: (err?: ExtendedError
         const decodedtoken=jwt.verify(authtoken,process.env.JWT_SECRET||"") as CustomJWTPayload;
         const user:IUser=await User.findById(decodedtoken._id)  as IUser
         if(!user){
-            return next(new Errorhandler("Please Login to access",401))
+             return next(new Errorhandler("Please Login to access",401))
+            
     
         }
         socket.user=user  
