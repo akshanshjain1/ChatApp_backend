@@ -42,8 +42,9 @@ const socketauthenticator=async(err:any,socket:Socket,next: (err?: ExtendedError
     try {
         if(err) return next(err);
         const authtoken=socket?.request?.cookies?.accesstoken;
-        if(!authtoken)
-            return next(new Errorhandler("Please Login to access",401))
+        if(!authtoken){
+            
+            return next(new Errorhandler("Please Login to access",401))}
         const decodedtoken=jwt.verify(authtoken,process.env.JWT_SECRET||"") as CustomJWTPayload;
         const user:IUser=await User.findById(decodedtoken._id)  as IUser
         if(!user){
@@ -54,7 +55,8 @@ const socketauthenticator=async(err:any,socket:Socket,next: (err?: ExtendedError
         return next()
     } catch (error) {
         console.log(error);
-        return next(new Errorhandler("Please Login to Access this",400))
+        // return next(new Errorhandler("Please Login to Access this",400))
+        throw error
     }
 }
 export { adminonly, isauthenticated, socketauthenticator };
