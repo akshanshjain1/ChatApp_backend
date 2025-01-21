@@ -10,20 +10,29 @@ import { Chat } from "../modals/chat.modal.js"
 import { FriendRequest } from "../modals/request.modal.js"
 import { NEW_REQUEST, REFETCH_CHATS } from "../constants/events.js"
 
-export const newuser = Trycatch(async (req: Request<{}, {}, Newuserrequestbody>, res: Response, next: NextFunction): Promise<void> => {
-
+export const newuser = Trycatch(async (req: Request<{}, {}, Newuserrequestbody>, res: Response, next: NextFunction):Promise<any> => {
+   
     const { name, username, password, bio } = req.body;
     const file=req.file
-    
-    if(!file?.path) return next(new Errorhandler("Please upload avatar",400))
+    const user=await User.find({username:username});
+    if (user.length > 0) {  // Check if the user exists in the database
+       
+       return next(new Errorhandler("User Already there",400))
+          // Return the error and stop further execution
+    }
+    if(!file?.path)  return next(new Errorhandler("Add avatar",400))
+
+   
     const result:Array<any>=await uploadfilesoncloudinary([file])
         const avatar = {
         public_id: result[0].public_id,
         url: result[0].url
     }
+   
     const newUser: IUser = await User.create({
         name, username, password, bio, avatar
     })
+
     sendToken(res, newUser, 201, "User Created")
 
 
@@ -43,7 +52,7 @@ const getMyProfile = Trycatch(async (req: Request, res: Response, next: NextFunc
     const UserId = req.user;
     const user = await User.findById(UserId);
     if(!user) return next(new Errorhandler("User not found",404))
-    return res.status(200).json({ message: 'user found successfully', user })
+    return res.status(200).json({ message: 'user found successfully', user})
 
 })
 

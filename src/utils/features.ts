@@ -1,5 +1,5 @@
 import mongoose from "mongoose"
-import { CookieOptions, Request, Response } from "express"
+import { CookieOptions, NextFunction, Request, Response } from "express"
 import jwt from 'jsonwebtoken'
 import { IUser } from "../types.js"
 import {v4 as uuid } from 'uuid'
@@ -9,6 +9,7 @@ import fs from 'fs'
 import dotenv from 'dotenv'
 import { io } from "../app.js"
 import { NEW_MESSAGE } from "../constants/events.js"
+import Errorhandler from "./utility-class.js"
 dotenv.config()
 cloudinary.config({
     cloud_name:process.env.CLOUDINARY_CLOUD_NAME,
@@ -26,7 +27,7 @@ const cookieoption:CookieOptions={
     try {
         //console.log(`${process.env.MONGODB_URI}`)
         const data=await mongoose.connect(`${process.env.MONGODB_URI}/ChatAPP`)
-        
+        console.log('db connected')
     } catch (error) {
         console.log('NOT connected to db')
         process.exit(1);
@@ -85,5 +86,7 @@ const uploadfilesoncloudinary=async(files:any[]=[])=>{
         throw new Error(`Error in uploading files to cloudinary  err->${err}`)
     }
 }
+
+
 const deletefilesfromcloudinary=async(files :any[]=[])=>{}
 export {connectdb,sendToken,cookieoption,emitEvent,deletefilesfromcloudinary,uploadfilesoncloudinary}
