@@ -12,14 +12,7 @@ import { auth, requiresAuth } from 'express-openid-connect';
 dotenv.config({
     path: './.env'
 })
-const config = {
-    authRequired: false,
-    auth0Logout: true,
-    baseURL: 'http://localhost:3000',
-    clientID: 'hNhwitLOpQUAzzwMxpUiudG03bEILhni',
-    issuerBaseURL: 'https://dev-7ua3ni4at8802xw2.us.auth0.com',
-    secret: 'LONG_RANDOM_STRING'
-  };
+
 
 connectdb()
 
@@ -41,8 +34,9 @@ app.set("io",io)
 app.use(cors(corsoption ))
 app.use(express.json())
 app.use(cookieParser())
+app.use(express.static("public"))
 
-app.use(auth(config));
+
 
 import userrouter from './routes/user.route.js'
 import chatrouter from './routes/chat.route.js'
