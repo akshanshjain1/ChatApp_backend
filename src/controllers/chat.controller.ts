@@ -376,7 +376,8 @@ const sendattachments = Trycatch(async (req: Request, res: Response, next: NextF
         chatid
     })
     emitEvent(req, NEW_MESSAGES_ALERT, chat.members, {
-        message
+        chatId:chatid
+        
     })
     
     return res.status(200).json({ success: true, message })
