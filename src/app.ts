@@ -9,6 +9,8 @@ import { createServer, IncomingMessage } from "http"
 import {v4 as uuid} from 'uuid'
 import { corsoption } from "./constants/config.js"
 import { auth, requiresAuth } from 'express-openid-connect';
+import { fileURLToPath } from "url"
+import path from "path"
 dotenv.config({
     path: './.env'
 })
@@ -28,13 +30,14 @@ const server=createServer(app);
 const io=new Server(server,{
     cors:corsoption
 })
-
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use('/public', express.static(path.join(__dirname, 'public','temp')));
 app.set("io",io)
 app.use(cors(corsoption ))
 app.use(express.json())
 app.use(cookieParser())
-app.use(express.static("public"))
+
 
 
 
