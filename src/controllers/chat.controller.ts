@@ -342,19 +342,24 @@ const leavefromgrp = Trycatch(async (req: Request, res: Response, next: NextFunc
 })
 
 const sendattachments = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
+    console.log("reached here")
     const { chatid } = req.body;
-    
+    console.log(chatid)
     const [chat, me] = await Promise.all([Chat.findById(chatid), User.findById(req.user, "name")])
+    console.log("2",chat,me)
     if (!chat)
         return next(new Errorhandler("Chat not found", 404));
+    console.log("3")
     const files: Array<any> = Array.isArray(req.files) ? req.files : [];
+    console.log("4===>",files)
    
     if (files.length < 1)
         return next(new Errorhandler("Provide attachements", 400));
     if(files.length >5)
             return next(new Errorhandler("files should be between 1-5",400))
-    
+    console.log("5")
     const attachments: Array<any> = await uploadfilesoncloudinary(files)
+    console.log("6")
     const messageforrealtime = {
         content: "", attachments, sender: {
             _id: me._id,
@@ -365,6 +370,7 @@ const sendattachments = Trycatch(async (req: Request, res: Response, next: NextF
         content: "", attachments, sender: me._id, chatid
     }
     const message = await Message.create(messagefordb)
+    console.log("7")
     emitEvent(req, NEW_MESSAGE, chat.members, {
         message: messageforrealtime,
         chatid
@@ -372,6 +378,7 @@ const sendattachments = Trycatch(async (req: Request, res: Response, next: NextF
     emitEvent(req, NEW_MESSAGES_ALERT, chat.members, {
         message
     })
+    console.log("8")
     return res.status(200).json({ success: true, message })
 
 })
