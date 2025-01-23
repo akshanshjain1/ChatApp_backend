@@ -44,7 +44,7 @@ app.use(cookieParser())
 import userrouter from './routes/user.route.js'
 import chatrouter from './routes/chat.route.js'
 import adminrouter from './routes/admin.route.js'
-import { CALL_ACCEPTED, CALL_CUT, CALL_REJECTED, CALLING, CHAT_JOINED, CHAT_LEAVED, NEW_MESSAGE, NEW_MESSAGES_ALERT, OFFER_ACCEPTED, ONLINE_USERS, PEER_NEGOTIATION_DONE, PEER_NEGOTIATION_NEEDED, SOMEONE_CALLING, START_TYPING, STOP_TYPING, TAKE_OFFER } from "./constants/events.js"
+import { CALL_ACCEPTED, CALL_CUT, CALL_REJECTED, CALLING, CHAT_JOINED, CHAT_LEAVED, ICE_CANDIDATE, NEW_MESSAGE, NEW_MESSAGES_ALERT, OFFER_ACCEPTED, ONLINE_USERS, PEER_NEGOTIATION_DONE, PEER_NEGOTIATION_NEEDED, SOMEONE_CALLING, START_TYPING, STOP_TYPING, TAKE_OFFER } from "./constants/events.js"
 import { getAnotherMember, getSockets } from "./lib/helper.js"
 import { Message } from "./modals/message.modal.js"
 import { socketauthenticator } from "./middlewares/auth.js"
@@ -165,7 +165,10 @@ io.on("connection",(socket)=>{
     socket.on(OFFER_ACCEPTED,async({UserId,CallReceivingUserId,ans})=>{
         io.to(userSocketIds.get(UserId)).emit(OFFER_ACCEPTED,{UserId,CallReceivingUserId,ans})
     })
-    
+    socket.on(ICE_CANDIDATE,({candidate,userid})=>{
+        io.to(userSocketIds.get(userid)).emit(ICE_CANDIDATE,{candidate,userid})
+
+    })
     socket.on(PEER_NEGOTIATION_NEEDED,async({offer,OutgoingUserId,IncomingUserId})=>{
             io.to(userSocketIds.get(IncomingUserId)).emit(PEER_NEGOTIATION_NEEDED,{offer,OutgoingUserId,IncomingUserId})
     })
