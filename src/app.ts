@@ -132,12 +132,12 @@ io.on("connection",(socket)=>{
         
     })
 
-    socket.on(CALLING,async(data:{ChatId:string,RoomId:string,UserId:string,Name:string})=>{
-        const {ChatId,UserId,Name,RoomId}=data;
+    socket.on(CALLING,async(data:{ChatId:string,RoomId:string,UserId:string,Name:string,type:string})=>{
+        const {ChatId,UserId,Name,RoomId,type}=data;
         const AnotherMember=await getAnotherMember(ChatId,UserId)
         if(onlineusers.has(AnotherMember)){
         io.to(socket.id).emit(CALLING,{...data,Forward:true});
-        io.to(userSocketIds.get(AnotherMember)).emit(SOMEONE_CALLING,{UserId,message:`${Name} is Calling You`,ChatId,ReceivingUserId:AnotherMember,RoomId:RoomId})
+        io.to(userSocketIds.get(AnotherMember)).emit(SOMEONE_CALLING,{UserId,message:`${Name} is Calling You`,ChatId,ReceivingUserId:AnotherMember,RoomId:RoomId,type})
         }
         else{
             io.to(socket.id).emit(CALLING,{...data,Forward:false})
