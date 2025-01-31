@@ -128,7 +128,7 @@ io.on("connection",(socket)=>{
 
     })
     socket.on(CHAT_LEAVED,({userId,members})=>{
-        onlineusers.add(userId.toString())
+        onlineusers.delete(userId.toString())
         const onlinesokets=getSockets(Array.from(onlineusers))
         io.to(onlinesokets).emit(ONLINE_USERS,Array.from(onlineusers))
         
