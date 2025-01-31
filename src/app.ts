@@ -119,16 +119,18 @@ io.on("connection",(socket)=>{
     })
     
 
-    socket.on(CHAT_JOINED,({userId,members})=>{
+    socket.on(CHAT_JOINED,({userId})=>{
+        
         onlineusers.add(userId.toString())
-        const memberssokets=getSockets(members)
-        io.to(memberssokets).emit(ONLINE_USERS,Array.from(onlineusers))
+        const onlinesokets=getSockets(Array.from(onlineusers))
+        
+        io.to(onlinesokets).emit(ONLINE_USERS,Array.from(onlineusers))
 
     })
     socket.on(CHAT_LEAVED,({userId,members})=>{
-        onlineusers.delete(userId.toString())
-        const memberssokets=getSockets(members)
-        io.to(memberssokets).emit(ONLINE_USERS,Array.from(onlineusers))
+        onlineusers.add(userId.toString())
+        const onlinesokets=getSockets(Array.from(onlineusers))
+        io.to(onlinesokets).emit(ONLINE_USERS,Array.from(onlineusers))
         
     })
 
