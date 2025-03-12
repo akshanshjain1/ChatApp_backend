@@ -18,7 +18,7 @@ const isauthenticated=Trycatch(async(req:Request,res:Response,next:NextFunction)
     if(!accesstoken)
         return next(new Errorhandler('Please Login',401))
     
-    const decodeddata=jwt.verify(accesstoken,process.env.JWT_SECRET||'') as CustomJWTPayload
+    const decodeddata= jwt.verify(accesstoken,process.env.JWT_SECRET||'') as CustomJWTPayload
     
 
     req.user=decodeddata._id ;

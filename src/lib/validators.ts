@@ -13,7 +13,21 @@ const loginvalidator = () => [
    body("username", "Please enter username").notEmpty(),
    body("password", "Please enter password").notEmpty()
 ];
+const authLoginvalidater=()=>[
+   body("email","Please pass the email").notEmpty(),
+   body("authtype","Please pass the token").notEmpty(),
+   body("avatar","Please fill me").notEmpty(),
+   body("name","Please Pass the name").notEmpty()
+   
+]
+const forgotpasswordvalidator=()=>[
+   body("email","Please enter the email").notEmpty()
+]
 
+const resetpasswordvalidator=()=>[
+   body("token","Please give the token").notEmpty(),
+   body("password","Please enter new password").notEmpty()
+]
 const newgrpchatvalidator = () => [
    body("name", "Please enter name").notEmpty(),
    body("members").notEmpty().withMessage("Please enter members").isArray({ min: 2, max: 100 }).withMessage("Members must be between 2-100")
@@ -83,6 +97,9 @@ export {
    registervalidator,
    validate,
    loginvalidator,
+   authLoginvalidater,
+   forgotpasswordvalidator,
+   resetpasswordvalidator,
    newgrpchatvalidator,
    addmembervalidator,
    removemembervalidator,

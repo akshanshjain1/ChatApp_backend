@@ -37,6 +37,12 @@ app.set("io",io)
 app.use(cors(corsoption ))
 app.use(express.json())
 app.use(cookieParser())
+app.use((req, res, next) => {
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  });
+  
 
 
 
@@ -49,6 +55,7 @@ import { getAnotherMember, getSockets } from "./lib/helper.js"
 import { Message } from "./modals/message.modal.js"
 import { socketauthenticator } from "./middlewares/auth.js"
 import { IUser } from "./types.js"
+import { User } from "./modals/user.modal.js"
 
 
 
@@ -74,6 +81,7 @@ io.on("connection",(socket)=>{
      userSocketIds.set(user._id.toString(),socket.id)
      SocketToUserId.set(socket.id,user._id.toString())
     socket.on(NEW_MESSAGE,async({chatId,members,messages}:any)=>{
+        const UserA=await User.findById(user._id)
         
        const messageforrealtime={
         content:messages,

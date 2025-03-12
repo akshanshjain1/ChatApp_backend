@@ -13,9 +13,19 @@ const userschema=new Schema<IUser>({
         required:true
     },
     password:{
+        type:String ,
+        required:false,
+        select:false
+    },
+    email:{
         type:String,
         required:true,
-        select:false
+        unique:true
+    },
+    authtype:{
+        type:String,
+        required:true,
+        default:"manual"
     },
     avatar:{
         public_id:{
@@ -31,11 +41,21 @@ const userschema=new Schema<IUser>({
     bio:{
         type:String,
         required:false
+    },
+    resetPasswordToken:{
+        type:String,
+        required:false,
+    },
+    resetPasswordTokenExpiry:{
+        type:String,
+        required:false,
     }
+   
+
 
 },{timestamps:true})
 userschema.pre("save",async function(next){
-    if(!this.isModified("password")) 
+    if(!this.isModified("password") || !this.password) 
         return next();
     const newpassword=await hash(this.password as string,10)
     this.password=newpassword;

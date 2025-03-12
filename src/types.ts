@@ -6,7 +6,8 @@ export interface Newuserrequestbody {
     name: string;
     username: string;
     password: string;
-    bio:string
+    bio:string,
+    email:string
     
 
 }
@@ -17,6 +18,13 @@ export interface loginrequestbody {
     
     
 
+}
+
+export interface authloginrequestbody{
+    avatar:string;
+    email:string;
+    name:string;
+    authtype:string
 }
 
 export type ControllerType = (
@@ -30,11 +38,16 @@ export interface IUser extends Document{
     name?:string,
     username?:string,
     password?:string,
+    email?:string,
+    authtype?:string,
     avatar?:{
         public_id:string,
         url:string
     },
-    bio?:string
+    bio?:string,
+    resetPasswordToken?:string,
+    resetPasswordTokenExpiry?:string,
+    
 }
 
 export interface IChat  extends Document{
