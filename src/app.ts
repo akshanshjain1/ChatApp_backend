@@ -24,6 +24,7 @@ export const envmode=process.env.NODE_ENV?.trim()||"PRODUCTION"
 
 const userSocketIds=new Map()
 const SocketToUserId=new Map()
+const locationIdToUserId=new Map()
 const onlineusers=new Set()
 const app = express()
 const server=createServer(app);
@@ -50,7 +51,7 @@ app.use((req, res, next) => {
 import userrouter from './routes/user.route.js'
 import chatrouter from './routes/chat.route.js'
 import adminrouter from './routes/admin.route.js'
-import { CALL_ACCEPTED, CALL_CUT, CALL_REJECTED, CALLING, CHAT_JOINED, CHAT_LEAVED, ICE_CANDIDATE, NEW_MESSAGE, NEW_MESSAGES_ALERT, OFFER_ACCEPTED, ONLINE_USERS, PEER_NEGOTIATION_DONE, PEER_NEGOTIATION_NEEDED, SOMEONE_CALLING, START_TYPING, STOP_TYPING, TAKE_OFFER } from "./constants/events.js"
+import { CALL_ACCEPTED, CALL_CUT, CALL_REJECTED, CALLING, CHAT_JOINED, CHAT_LEAVED, ICE_CANDIDATE, LIVE_LOCATION_REQ_ACCEPTED, NEW_MESSAGE, NEW_MESSAGES_ALERT, OFFER_ACCEPTED, ONLINE_USERS, PEER_NEGOTIATION_DONE, PEER_NEGOTIATION_NEEDED, REJECT_LIVE_LOCATION, SEND_LIVE_LOCATION_NOTIFICATION, SEND_LOCATION, SOME_ONE_SENDING_LIVE_LOCATION, SOMEONE_CALLING, START_TYPING, STOP_TYPING, TAKE_OFFER } from "./constants/events.js"
 import { getAnotherMember, getSockets } from "./lib/helper.js"
 import { Message } from "./modals/message.modal.js"
 import { socketauthenticator } from "./middlewares/auth.js"
@@ -189,6 +190,44 @@ io.on("connection",(socket)=>{
 
     socket.on(CALL_CUT,async({CallcutUserid,RoomId})=>{
         io.to(userSocketIds.get(CallcutUserid)).emit(CALL_CUT,{CallcutUserid,Roomid:RoomId})
+    })
+
+    socket.on(SEND_LIVE_LOCATION_NOTIFICATION,async(data:{UserId:string,chatId:string,senderName:string,locationId:string}):Promise<void>=>{
+       const {chatId,senderName,locationId,UserId}=data;
+       const AnotherMember=await getAnotherMember(chatId,UserId);
+       
+       if(onlineusers.has(AnotherMember)){
+        io.to(socket.id).emit(SEND_LIVE_LOCATION_NOTIFICATION,{...data,Forward:true});
+        io.to(userSocketIds.get(AnotherMember)).emit(SOME_ONE_SENDING_LIVE_LOCATION,{UserId,message:`${senderName} is Sharing live location`,ChatId:chatId,ReceivingUserId:AnotherMember,locationId})
+        }
+        else{
+            io.to(socket.id).emit(SEND_LIVE_LOCATION_NOTIFICATION,{...data,Forward:false})
+        }
+
+    })
+
+    socket.on(REJECT_LIVE_LOCATION,async(LiveLocationInfo:{UserId:string,message:string,ChatId:string,ReceivingUserId:string,locationId:string})=>{
+        const {UserId,message,ChatId,ReceivingUserId,locationId}=LiveLocationInfo
+        io.to(userSocketIds.get(UserId)).emit(REJECT_LIVE_LOCATION,{message:`${user.name} has rejected live location request`})
+    })
+    socket.on(LIVE_LOCATION_REQ_ACCEPTED,async(LiveLocationInfo:{UserId:string,message:string,ChatId:string,ReceivingUserId:string,locationId:string})=>{
+        const {UserId,message,ChatId,ReceivingUserId,locationId}=LiveLocationInfo
+        locationIdToUserId.set(locationId,{sender:UserId,Receiver:ReceivingUserId})
+        io.to(userSocketIds.get(UserId)).emit(LIVE_LOCATION_REQ_ACCEPTED,{message:`${user.name} has accepted live location request`,locationId})
+    })
+    socket.on(SEND_LOCATION,async({latitude,longitude,locationId,SenderId}:{latitude:string,longitude:string,locationId:string,SenderId:string})=>{
+       // console.log(latitude,longitude,locationId,SenderId)
+        const users=locationIdToUserId.get(locationId);
+        if(!users)
+            return ;
+        
+        const {sender,Receiver}=users;
+        if(sender.toString()!==SenderId.toString())
+                return ;
+
+        io.to([userSocketIds.get(sender),userSocketIds.get(Receiver)]).emit(SEND_LOCATION,{latitude,longitude,locationId})    
+
+
     })
     socket.on('disconnect',()=>{
         
