@@ -51,7 +51,7 @@ app.use((req, res, next) => {
 import userrouter from './routes/user.route.js'
 import chatrouter from './routes/chat.route.js'
 import adminrouter from './routes/admin.route.js'
-import { CALL_ACCEPTED, CALL_CUT, CALL_REJECTED, CALLING, CHAT_JOINED, CHAT_LEAVED, ICE_CANDIDATE, LIVE_LOCATION_REQ_ACCEPTED, NEW_MESSAGE, NEW_MESSAGES_ALERT, OFFER_ACCEPTED, ONLINE_USERS, PEER_NEGOTIATION_DONE, PEER_NEGOTIATION_NEEDED, REJECT_LIVE_LOCATION, SEND_LIVE_LOCATION_NOTIFICATION, SEND_LOCATION, SOME_ONE_SENDING_LIVE_LOCATION, SOMEONE_CALLING, START_TYPING, STOP_TYPING, TAKE_OFFER } from "./constants/events.js"
+import { CALL_ACCEPTED, CALL_CUT, CALL_REJECTED, CALLING, CHAT_JOINED, CHAT_LEAVED, ICE_CANDIDATE, LIVE_LOCATION_REQ_ACCEPTED, NEW_MESSAGE, NEW_MESSAGES_ALERT, OFFER_ACCEPTED, ONLINE_USERS, PEER_NEGOTIATION_DONE, PEER_NEGOTIATION_NEEDED, REJECT_LIVE_LOCATION, SEND_LIVE_LOCATION_NOTIFICATION, SEND_LOCATION, SOME_ONE_SENDING_LIVE_LOCATION, SOMEONE_CALLING, START_TYPING, STOP_LIVE_LOCATION, STOP_TYPING, TAKE_OFFER } from "./constants/events.js"
 import { getAnotherMember, getSockets } from "./lib/helper.js"
 import { Message } from "./modals/message.modal.js"
 import { socketauthenticator } from "./middlewares/auth.js"
@@ -228,6 +228,14 @@ io.on("connection",(socket)=>{
         io.to([userSocketIds.get(sender),userSocketIds.get(Receiver)]).emit(SEND_LOCATION,{latitude,longitude,locationId})    
 
 
+    })
+
+    socket.on(STOP_LIVE_LOCATION,async({locationId,stopinguser}:{locationId:string,stopinguser:string})=>{
+        const users=locationIdToUserId.get(locationId);
+        
+        locationIdToUserId.delete(locationId);
+        const anotheruseronlivelocation=users.sender.toString()===stopinguser?users.Receiver:users.sender;
+        io.to(userSocketIds.get(anotheruseronlivelocation)).emit(STOP_LIVE_LOCATION,{message:"Your friend stopped live location"})
     })
     socket.on('disconnect',()=>{
         
