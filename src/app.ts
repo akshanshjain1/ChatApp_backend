@@ -57,6 +57,7 @@ import { Message } from "./modals/message.modal.js"
 import { socketauthenticator } from "./middlewares/auth.js"
 import { IUser } from "./types.js"
 import { User } from "./modals/user.modal.js"
+import { cache } from "./controllers/ai-chat.controller.js"
 
 
 
@@ -245,6 +246,15 @@ io.on("connection",(socket)=>{
     })
 })
 app.use(errorMiddleware)
+setInterval(() => {
+    const now = Date.now();
+    cache.keys().forEach((sessionId) => {
+      const session = cache.get(sessionId) as {history:string[],lastActivity?:number} ;
+      if (session && session.lastActivity && now - session.lastActivity > 900000) {
+        cache.del(sessionId); // Remove inactive session
+      }
+    });
+  }, 60000);
 server.listen(port, () => {
     console.log(`server started at ${port} in ${envmode} Mode`)
 })
