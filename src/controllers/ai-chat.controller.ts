@@ -132,7 +132,7 @@ async function getImageUrl(requestId:string) {
             console.error("Error checking generation status:", error.response?.data || error.message);
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 sec before retrying
+        await new Promise((resolve) => setTimeout(resolve, 7000)); 
     }
 
     return "Image generation timed out. Please try again!";
@@ -180,6 +180,7 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
     if (categories.includes("image")) {
         try {
             const imageResponse = await generateImage(prompt);
+            console.log(imageResponse)
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             
             
