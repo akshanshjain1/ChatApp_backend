@@ -85,7 +85,7 @@ async function generateImage(prompt:string) {
     try {
         //console.log("Requesting image generation from AI Horde...");
         const data = {
-            prompt: "generate image of panda",
+            prompt,
             params: {
               width: 512,
               height: 512,
@@ -117,8 +117,8 @@ async function getImageUrl(requestId:string) {
         try {
             const { data } = await axios.get(`https://stablehorde.net/api/v2/generate/status/${requestId}`, {
                 headers: {
-                   'Client-Agent': 'my-app',
-              'apikey': '0000000000'
+                   'Client-Agent': 'chatkaroAI',
+                    'apikey': '0000000000'
                 }
             });
 
@@ -197,7 +197,7 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
                 messages: [
                     {
                         role: "user",
-                        content: `You are an AI assistant in a chat application named ChatKaro, based in India. Your name is ChatKaroAI, and you are designed to assist users on the ChatKaro website. You do not need to introduce yourself.Or welcome to Chatkaro.Chatkaro has video calls audio calls live location, e2ee 
+                        content: `You are an AI assistant in a chat application named ChatKaro, based in India. Your name is ChatKaroAI, and you are designed to assist users on the ChatKaro website. You do not need to introduce yourself.Or welcome to Chatkaro.Chatkaro has video calls audio calls live location, e2ee.Only introduce about features when asked or like to compare with other apps.Means Do not introduce features if not required 
 
 Here is the chat history so far:  
 ${session.history.map((i: any) => `${i.role}: ${i.content}`).join("\n")}
