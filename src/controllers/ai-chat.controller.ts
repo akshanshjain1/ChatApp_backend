@@ -23,18 +23,26 @@ async function classifyPrompt(prompt: string) {
     ;
     const response = await ai.models.generateContent({
         model: "gemini-2.0-flash",
-        contents: `Analyze the following user prompt and Return a valid JSON object. Identify relevant categories from: ["conversation", "coding", "math", "wikipedia", "image"]. You should give that category that can have maximum chances . also you can give multiple categories as well.In case of multiple categories possible give the category name according to priority.Like which category have maximum chances should come first.You can have any number of category from given category if u want.If a programming language is mentioned, extract it; otherwise, default to "cpp". Ensure the response follows this exact JSON format without extra text . Do not write anything just a {} and data inside this:
+        contents: `Analyze the following user prompt and return a valid JSON object. Identify relevant categories from: 
+        ["conversation", "coding", "math", "wikipedia", "image"]. 
+        You should give the category that has the highest probability. Also, you can provide multiple categories if applicable.  
+        If multiple categories are possible, list them in order of priority, with the most relevant category first.  
+        If a programming language is mentioned, extract it; otherwise, default to "cpp".  
+    
+        Ensure the response follows this exact JSON format without extra text. Do not write anything except a JSON object:
         
         {
-          "categories": ["category1"],
+          "categories": ["category1", "category2", ...],
           "language": "extracted_or_default_language"
         }
-        
+    
         Prompt: "${prompt}"`
     });
+    
 
 
     const result = await (response.text?.slice(7).slice(0, -3)) as string;
+    //console.log(result)
     try {
         return JSON.parse(result);
     } catch (error) {
@@ -43,8 +51,9 @@ async function classifyPrompt(prompt: string) {
     }
 }
 async function fetchWikipedia(query: string) {
+    
     const response = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`);
-
+   // console.log("wiki:",response)
     return response.data.extract;
 }
 
@@ -62,7 +71,7 @@ async function generateCode(prompt: string, language: string) {
             ],
             model: "llama-3.3-70b-versatile",
         });
-        
+       // console.log(response.choices[0].message.content)
         return response.choices[0].message.content;
     } catch (error) {
         console.error("DeepSeek API error:", error);
@@ -71,26 +80,72 @@ async function generateCode(prompt: string, language: string) {
 }
 
 // Function to generate images using Hugging Face Stable Diffusion
-async function generateImage(prompt: string) {
-  
-    const response = await axios.post(
-        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1",
-        { inputs: prompt },
-        { headers: { Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}` }, responseType: "arraybuffer" }
-    );
-    
-    return `data:image/png;base64,${Buffer.from(response.data).toString("base64")}`;
+async function generateImage(prompt:string) {
+    try {
+        //console.log("Requesting image generation from AI Horde...");
+        const data = {
+            prompt: "generate image of panda",
+            params: {
+              width: 512,
+              height: 512,
+              steps: 20,
+              sampler_name: "k_euler_a",
+              cfg_scale: 7  // Optional but recommended
+            }
+          };
+        
+        const res = await axios.post('https://stablehorde.net/api/v2/generate/async', data, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Client-Agent': 'my-app',
+              'apikey': '0000000000'  // Replace with your API key
+            }
+          })
+         // console.log(res?.data)
+        return await getImageUrl(res?.data.id);
+    } catch (error) {
+       // console.error("Error requesting AI Horde:", error);
+        return "Image generation failed. Please try again!";
+    }
 }
 
-// Function to handle chatbot logic
-// Function to handle chatbot logic
-// Function to handle chatbot logic with conversation context
-// Function to handle chatbot logic with proper context
+async function getImageUrl(requestId:string) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < 120000) {
+        try {
+            const { data } = await axios.get(`https://stablehorde.net/api/v2/generate/status/${requestId}`, {
+                headers: {
+                   'Client-Agent': 'my-app',
+              'apikey': '0000000000'
+                }
+            });
+
+            if (data.done && data.generations?.length > 0) {
+                
+                return data.generations[0].img;
+            }
+
+            //console.log("Waiting for image generation...");
+        } catch (error: any) {
+            console.error("Error checking generation status:", error.response?.data || error.message);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 sec before retrying
+    }
+
+    return "Image generation timed out. Please try again!";
+}
+
+
+
+
 async function chatbotResponse(session: any, prompt: string, categories: string[], language: string) {
     let responses: string[] = [];
+    let image:string[]=[]
     
 
-    // Fetch Wikipedia summary if the category includes "wikipedia"
+    
     if (categories.includes("wikipedia")) {
         try {
             const wikiSummary = await fetchWikipedia(prompt);
@@ -100,7 +155,7 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
         }
     }
 
-    // Evaluate mathematical expressions if the category includes "math"
+ 
     if (categories.includes("math")) {
         try {
             const mathAnswer = eval(prompt); // Ensure safe evaluation if handling user input
@@ -110,7 +165,7 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
         }
     }
 
-    // Generate code if the category includes "coding"
+    
     if (categories.includes("coding")) {
         try {
             const codeResponse = await generateCode(prompt, language);
@@ -120,17 +175,20 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
         }
     }
 
-    // Generate image if the category includes "image"
+    
     if (categories.includes("image")) {
         try {
             const imageResponse = await generateImage(prompt);
-            return { response: `Here is the generated image:`, image: imageResponse };
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            
+            
+            return { response: `Here is the generated image:`, attachments: imageResponse.match(urlRegex) || []};
         } catch (error) {
             responses.push("Image generation failed.");
         }
     }
 
-    // Conversation Handling with Context
+    
     if ((categories.includes("conversation") && responses.length === 0) || categories.length === 0 || (!categories.includes("coding") && !categories.includes("math") && !categories.includes("image"))) {
         try {
             
@@ -138,16 +196,17 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
                 messages: [
                     {
                         role: "user",
-                        content: `You are an AI assistant in a chat application named ChatKaro, based in India. Your name is ChatKaroAI, and you are designed to assist users on the ChatKaro website. You do not need to introduce yourself.
+                        content: `You are an AI assistant in a chat application named ChatKaro, based in India. Your name is ChatKaroAI, and you are designed to assist users on the ChatKaro website. You do not need to introduce yourself.Or welcome to Chatkaro.Chatkaro has video calls audio calls live location, e2ee 
 
 Here is the chat history so far:  
 ${session.history.map((i: any) => `${i.role}: ${i.content}`).join("\n")}
 
-Keep this context in mind while answering.  
+Keep this context in mind while answering.If any reference is made or you find any reference with the chat history then continue according to it else start a fresh but always keep an eye on chat history
 
-Now, generate a response with a mix of politeness and humor. Try to connect with reality and make it engaging. If you find any part in parentheses (), use it to improve your response.  
+Now, generate a response with a mix of politeness and humor.Try to connect with reality and make it engaging.You can include font in bold if required.Not much it that it become really bad but may be heading and few words can be highlighted so that the answer will look visibly good. If you find any part in parentheses (), use it to improve your response.  
 
-The responses are generated from different agents, so you should only enhance them without changing their core meaning. If the response includes something like "I couldn't fetch Wikipedia information," then generate an answer yourself instead of stating the failure.  
+The responses are generated from different agents, so you should only enhance them without changing their core meaning. If the response includes something like "Sorry,I couldn't fetch Wikipedia information," then generate an answer yourself instead of stating the failure.Do not include this line "Sorry,I couldn't fetch Wikipedia information," if it came in () you are working on a website of company worth 50cr  
+If their is something code written in () then you should only improvise on that nothing adding from your own side.You can introduce "\n" whereever required in code so that at frontend it should look better.
 
 Respond in **English or Hinglish only**. Make sure your response is **interactive and includes emojis** to enhance engagement. The final answer should be well-structured since it will be used in my website.  
 
@@ -168,11 +227,12 @@ Now, answer the prompt: "${prompt}"`
         }
     }
 
-    // Append new messages to session history
+   
     session.history.push({ role: "user", content: prompt });
     session.history.push({ role: "assistant", content: responses.join("\n\n") });
-    session.history = session.history.slice(-5);
+    session.history = session.history.slice(-6);
     session.lastActivity=Date.now()
+    
     //console.log(session)
     return { response: responses.join("\n\n") };
 }
@@ -198,7 +258,9 @@ const ChatwithAI = Trycatch(async (req: Request, res: Response, next: NextFuncti
             _id:uuid(),
             
             chatid:sessionId,
-            createdAt:new Date().toISOString()
+            createdAt:new Date().toISOString(),
+            attachments:response?.attachments
+
            }
     cache.set(sessionId, session);
     return res.json(messageforrealtime).status(200);
