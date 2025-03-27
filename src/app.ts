@@ -1,16 +1,16 @@
-import express, { NextFunction, request, Request, Response, urlencoded } from "express"
-import dotenv from 'dotenv'
-import { connectdb } from "./utils/features.js"
-import { errorMiddleware } from "./middlewares/error.js"
-import cors from 'cors'
 import cookieParser from 'cookie-parser'
-import  {ExtendedError, Server, Socket} from 'socket.io'
-import { createServer, IncomingMessage } from "http"
-import {v4 as uuid} from 'uuid'
-import { corsoption } from "./constants/config.js"
-import { auth, requiresAuth } from 'express-openid-connect';
-import { fileURLToPath } from "url"
+import cors from 'cors'
+import dotenv from 'dotenv'
+import express, { Response } from "express"
+import { createServer } from "http"
+import NodeCache from "node-cache"
 import path from "path"
+import { ExtendedError, Server, Socket } from 'socket.io'
+import { fileURLToPath } from "url"
+import { v4 as uuid } from 'uuid'
+import { corsoption } from "./constants/config.js"
+import { errorMiddleware } from "./middlewares/error.js"
+import { connectdb } from "./utils/features.js"
 dotenv.config({
     path: './.env'
 })
@@ -26,6 +26,7 @@ const userSocketIds=new Map()
 const SocketToUserId=new Map()
 const locationIdToUserId=new Map()
 const onlineusers=new Set()
+export const cache = new NodeCache({ stdTTL: 1200 });
 const app = express()
 const server=createServer(app);
 const io=new Server(server,{
@@ -48,16 +49,17 @@ app.use((req, res, next) => {
 
 
 
-import userrouter from './routes/user.route.js'
-import chatrouter from './routes/chat.route.js'
-import adminrouter from './routes/admin.route.js'
 import { CALL_ACCEPTED, CALL_CUT, CALL_REJECTED, CALLING, CHAT_JOINED, CHAT_LEAVED, ICE_CANDIDATE, LIVE_LOCATION_REQ_ACCEPTED, NEW_MESSAGE, NEW_MESSAGES_ALERT, OFFER_ACCEPTED, ONLINE_USERS, PEER_NEGOTIATION_DONE, PEER_NEGOTIATION_NEEDED, REJECT_LIVE_LOCATION, SEND_LIVE_LOCATION_NOTIFICATION, SEND_LOCATION, SOME_ONE_SENDING_LIVE_LOCATION, SOMEONE_CALLING, START_TYPING, STOP_LIVE_LOCATION, STOP_TYPING, TAKE_OFFER } from "./constants/events.js"
 import { getAnotherMember, getSockets } from "./lib/helper.js"
-import { Message } from "./modals/message.modal.js"
 import { socketauthenticator } from "./middlewares/auth.js"
-import { IUser } from "./types.js"
+import { Message } from "./modals/message.modal.js"
 import { User } from "./modals/user.modal.js"
-import { cache } from "./controllers/ai-chat.controller.js"
+import adminrouter from './routes/admin.route.js'
+import chatrouter from './routes/chat.route.js'
+import userrouter from './routes/user.route.js'
+import { IUser } from "./types.js"
+
+
 
 
 
@@ -248,14 +250,15 @@ io.on("connection",(socket)=>{
 app.use(errorMiddleware)
 setInterval(() => {
     const now = Date.now();
+     
     cache.keys().forEach((sessionId) => {
       const session = cache.get(sessionId) as {history:string[],lastActivity?:number} ;
-      if (session && session.lastActivity && now - session.lastActivity > 900000) {
-        cache.del(sessionId); // Remove inactive session
+      if (session && session.lastActivity && now - session.lastActivity > 600000) {
+        cache.del(sessionId); 
       }
     });
   }, 60000);
 server.listen(port, () => {
     console.log(`server started at ${port} in ${envmode} Mode`)
 })
-export {userSocketIds,io}
+export { io, userSocketIds }

@@ -7,6 +7,7 @@ import OpenAI from "openai";
 import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
 import {v4 as uuid} from 'uuid'
+import { cache } from "../app.js";
 dotenv.config()
 const ai = new GoogleGenAI({ apiKey: `${process.env.GOOGLE_GEMINI_API}` });
 
@@ -16,7 +17,7 @@ const openai = new OpenAI({
 });
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-export const cache = new NodeCache({ stdTTL: 1200 });
+
 
 
 async function classifyPrompt(prompt: string) {
