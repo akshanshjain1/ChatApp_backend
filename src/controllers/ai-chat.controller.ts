@@ -113,7 +113,7 @@ async function generateImage(prompt:string) {
 async function getImageUrl(requestId:string) {
     const startTime = Date.now();
 
-    while (Date.now() - startTime < 120000) {
+    while (Date.now() - startTime < 30000) {
         try {
             const { data } = await axios.get(`https://stablehorde.net/api/v2/generate/status/${requestId}`, {
                 headers: {
@@ -231,7 +231,7 @@ Now, answer the prompt: "${prompt}"`
    
     session.history.push({ role: "user", content: prompt });
     session.history.push({ role: "assistant", content: responses.join("\n\n") });
-    session.history = session.history.slice(-6);
+    session.history = session.history.slice(-10);
     session.lastActivity=Date.now()
     
     //console.log(session)
