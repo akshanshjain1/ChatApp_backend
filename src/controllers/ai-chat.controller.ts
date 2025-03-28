@@ -6,7 +6,7 @@ import dotenv from "dotenv"
 import OpenAI from "openai";
 import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
-import {v4 as uuid} from 'uuid'
+import { v4 as uuid } from 'uuid'
 import { cache } from "../app.js";
 dotenv.config()
 const ai = new GoogleGenAI({ apiKey: `${process.env.GOOGLE_GEMINI_API}` });
@@ -20,41 +20,42 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 
 
-async function classifyPrompt(prompt: string) {
-    ;
+async function classifyPrompt(session: any, prompt: string) {
+
     const response = await ai.models.generateContent({
         model: "gemini-2.0-flash",
-        contents: `Analyze the following user prompt and return a valid JSON object. Identify relevant categories from: 
-        ["conversation", "coding", "math", "wikipedia", "image"]. 
-        You should give the category that has the highest probability. Also, you can provide multiple categories if applicable.  
-        If multiple categories are possible, list them in order of priority, with the most relevant category first.  
-        If a programming language is mentioned, extract it; otherwise, default to "cpp".  
-    
-        Ensure the response follows this exact JSON format without extra text. Do not write anything except a JSON object:
-        
-        {
-          "categories": ["category1", "category2", ...],
-          "language": "extracted_or_default_language"
-        }
-    
-        Prompt: "${prompt}"`
+        contents: `Analyze the following user prompt and return a valid JSON object. 
+        Identify relevant categories from: ["conversation", "coding", "math", "wikipedia", "image"].
+         You should give the category that has the highest probability. Also, you can provide multiple categories
+          if applicable. If multiple categories are possible, list them in order of priority, with the most
+           relevant category first. If a programming language is mentioned, extract it; otherwise, default 
+           to "cpp". Here is the chat history enclosed in () so far: 
+           (${session.history.map((i: any) => `${i.role}: ${i.content}`).join("\n")}) 
+           Consider this the chat history also to understand the current context. 
+           Ensure the response follows this exact JSON format without extra text. 
+           Do not write anything except a JSON object: 
+           { "categories": ["category1", "category2", ...], 
+            "language": "extracted_or_default_language" } 
+                 
+            
+             Prompt: "${prompt}"`,
     });
-    
+
 
 
     const result = await (response.text?.slice(7).slice(0, -3)) as string;
-    //console.log(result)
+    
     try {
         return JSON.parse(result);
     } catch (error) {
-       // console.error("Failed to parse classification response:", response.text);
+        // console.error("Failed to parse classification response:", response.text);
         return { categories: ["conversation"], language: "cpp" };
     }
 }
 async function fetchWikipedia(query: string) {
-    
+
     const response = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`);
-   // console.log("wiki:",response)
+    // console.log("wiki:",response)
     return response.data.extract;
 }
 
@@ -70,9 +71,9 @@ async function generateCode(prompt: string, language: string) {
                     content: `Do Not introduce yourself.Write code in this language only->${language}: Question->${prompt}.Do not use any other language please`,
                 },
             ],
-            model: "llama-3.3-70b-versatile",
+            model: "deepseek-r1-distill-qwen-32b",
         });
-       // console.log(response.choices[0].message.content)
+        // console.log(response.choices[0].message.content)
         return response.choices[0].message.content;
     } catch (error) {
         console.error("DeepSeek API error:", error);
@@ -81,49 +82,49 @@ async function generateCode(prompt: string, language: string) {
 }
 
 // Function to generate images using Hugging Face Stable Diffusion
-async function generateImage(prompt:string) {
+async function generateImage(prompt: string) {
     try {
         //console.log("Requesting image generation from AI Horde...");
         const data = {
             prompt,
             params: {
-              width: 512,
-              height: 512,
-              steps: 20,
-              sampler_name: "k_euler_a",
-              cfg_scale: 7  // Optional but recommended
+                width: 512,
+                height: 512,
+                steps: 20,
+                sampler_name: "k_euler_a",
+                cfg_scale: 7  // Optional but recommended
             }
-          };
-        
+        };
+
         const res = await axios.post('https://stablehorde.net/api/v2/generate/async', data, {
             headers: {
-              'Content-Type': 'application/json',
-              'Client-Agent': 'my-app',
-              'apikey': '0000000000'  // Replace with your API key
+                'Content-Type': 'application/json',
+                'Client-Agent': 'my-app',
+                'apikey': '0000000000'  // Replace with your API key
             }
-          })
-         // console.log(res?.data)
+        })
+        // console.log(res?.data)
         return await getImageUrl(res?.data.id);
     } catch (error) {
-       // console.error("Error requesting AI Horde:", error);
+        // console.error("Error requesting AI Horde:", error);
         return "Image generation failed. Please try again!";
     }
 }
 
-async function getImageUrl(requestId:string) {
+async function getImageUrl(requestId: string) {
     const startTime = Date.now();
 
     while (Date.now() - startTime < 30000) {
         try {
             const { data } = await axios.get(`https://stablehorde.net/api/v2/generate/status/${requestId}`, {
                 headers: {
-                   'Client-Agent': 'chatkaroAI',
+                    'Client-Agent': 'chatkaroAI',
                     'apikey': '0000000000'
                 }
             });
 
             if (data.done && data.generations?.length > 0) {
-                
+
                 return data.generations[0].img;
             }
 
@@ -132,7 +133,7 @@ async function getImageUrl(requestId:string) {
             console.error("Error checking generation status:", error.response?.data || error.message);
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 7000)); 
+        await new Promise((resolve) => setTimeout(resolve, 7000));
     }
 
     return "Image generation timed out. Please try again!";
@@ -143,10 +144,10 @@ async function getImageUrl(requestId:string) {
 
 async function chatbotResponse(session: any, prompt: string, categories: string[], language: string) {
     let responses: string[] = [];
-    let image:string[]=[]
-    
+    let image: string[] = []
 
-    
+
+
     if (categories.includes("wikipedia")) {
         try {
             const wikiSummary = await fetchWikipedia(prompt);
@@ -156,7 +157,7 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
         }
     }
 
- 
+
     if (categories.includes("math")) {
         try {
             const mathAnswer = eval(prompt); // Ensure safe evaluation if handling user input
@@ -166,7 +167,7 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
         }
     }
 
-    
+
     if (categories.includes("coding")) {
         try {
             const codeResponse = await generateCode(prompt, language);
@@ -176,24 +177,24 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
         }
     }
 
-    
+
     if (categories.includes("image")) {
         try {
             const imageResponse = await generateImage(prompt);
-            console.log(imageResponse)
+            
             const urlRegex = /(https?:\/\/[^\s]+)/g;
-            
-            
-            return { response: `Here is the generated image:`, attachments: imageResponse.match(urlRegex) || []};
+
+
+            return { response: `Here is the generated image:`, attachments: imageResponse.match(urlRegex) || [] };
         } catch (error) {
             responses.push("Image generation failed.");
         }
     }
 
-    
-    if ((categories.includes("conversation") && responses.length === 0) || categories.length === 0 || (!categories.includes("coding") && !categories.includes("math") && !categories.includes("image"))) {
+
+    if ((categories.includes("conversation") ) || categories.length === 0 || ( !categories.includes("math") && !categories.includes("image"))) {
         try {
-            
+
             const response = await groq.chat.completions.create({
                 messages: [
                     {
@@ -209,6 +210,7 @@ Now, generate a response with a mix of politeness and humor.Try to connect with 
 
 The responses are generated from different agents, so you should only enhance them without changing their core meaning. If the response includes something like "Sorry,I couldn't fetch Wikipedia information," then generate an answer yourself instead of stating the failure.Do not include this line "Sorry,I couldn't fetch Wikipedia information," if it came in () you are working on a website of company worth 50cr  
 If their is something code written in () then you should only improvise on that nothing adding from your own side.You can introduce "\n" whereever required in code so that at frontend it should look better.
+If some conding thing is their in () then do not change it just try to explain it more.Do not do anything with code provide it as it is.
 
 Respond in **English or Hinglish only**. Make sure your response is **interactive and includes emojis** to enhance engagement. The final answer should be well-structured since it will be used in my website.  
 
@@ -229,12 +231,12 @@ Now, answer the prompt: "${prompt}"`
         }
     }
 
-   
+
     session.history.push({ role: "user", content: prompt });
     session.history.push({ role: "assistant", content: responses.join("\n\n") });
     session.history = session.history.slice(-10);
-    session.lastActivity=Date.now()
-    
+    session.lastActivity = Date.now()
+
     //console.log(session)
     return { response: responses.join("\n\n") };
 }
@@ -243,27 +245,27 @@ Now, answer the prompt: "${prompt}"`
 
 
 const ChatwithAI = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
-    
+
     const { sessionId, prompt } = req.body;
-    
+
     if (!sessionId || !prompt)
         return res.status(400).json({ message: "SessionID and prompt is required" });
     let session = cache.get(sessionId) || { history: [], lastActivity: Date.now() };
- // Update timestamp on request
+    // Update timestamp on request
 
-    
-    const { categories, language } = await classifyPrompt(prompt);
-    
+
+    const { categories, language } = await classifyPrompt(session, prompt);
+
     const response = await chatbotResponse(session, prompt, categories, language);
-    const messageforrealtime={
-            content:response.response,
-            _id:uuid(),
-            
-            chatid:sessionId,
-            createdAt:new Date().toISOString(),
-            attachments:response?.attachments
+    const messageforrealtime = {
+        content: response.response,
+        _id: uuid(),
 
-           }
+        chatid: sessionId,
+        createdAt: new Date().toISOString(),
+        attachments: response?.attachments
+
+    }
     cache.set(sessionId, session);
     return res.json(messageforrealtime).status(200);
 
