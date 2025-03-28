@@ -192,7 +192,7 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
     }
 
 
-    if ((categories.includes("conversation") ) || categories.length === 0 || ( !categories.includes("math") && !categories.includes("image"))) {
+    if ((categories.includes("conversation") ) || categories.length === 0 || ( !categories.includes("image"))) {
         try {
 
             const response = await groq.chat.completions.create({
