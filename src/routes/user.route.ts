@@ -1,5 +1,5 @@
 import express from "express";
-import { getMyProfile, login, logout, newuser, searchuser,sendfriendrequest ,acceptfriendrequest,getmynotifications, getmyfriends, authlogin, forgotPassword, resetPassword} from "../controllers/user.controller.js";
+import { getMyProfile, login, logout, newuser, searchuser,sendfriendrequest ,acceptfriendrequest,getmynotifications, getmyfriends, authlogin, forgotPassword, resetPassword, AllowAutoPlay, DisableAutoReply} from "../controllers/user.controller.js";
 import { singleavatar } from "../middlewares/multer.js";
 import { isauthenticated } from "../middlewares/auth.js";
 import { acceptfriendrequestvalidator, authLoginvalidater, forgotpasswordvalidator, loginvalidator, registervalidator, resetpasswordvalidator, sendfriendrequestvalidator, validate } from "../lib/validators.js";
@@ -20,4 +20,6 @@ router.route('/sendfriendrequest').put(sendfriendrequestvalidator(),validate,sen
 router.route('/acceptfriendrequest').put(acceptfriendrequestvalidator(),validate,acceptfriendrequest)
 router.route('/getmynotifications').get(getmynotifications)
 router.route('/getmyfriends').get(getmyfriends)
+router.route('/allowAutoReply/:userid').patch(AllowAutoPlay)
+router.route('/disableAutoReply/:userid').patch(DisableAutoReply)
 export default router

@@ -8,11 +8,12 @@ import { User } from "../modals/user.modal.js";
 import { IChat, IMessage } from "../types.js";
 import { deletefilesfromcloudinary, emitEvent, uploadfilesoncloudinary } from "../utils/features.js";
 import Errorhandler from "../utils/utility-class.js";
-
+import { groq } from "./ai-chat.controller.js";
+import JSON5 from 'json5';
 
 const newGrpChat = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
     const { name, members } = req.body;
-    
+
     if (members.length < 2)
         return next(new Errorhandler('Group must have atleast 3 members', 400))
     const allmembers: mongoose.Types.ObjectId[] = [...members, req.user]
@@ -291,7 +292,7 @@ const removeMember = Trycatch(async (req: Request, res: Response, next: NextFunc
     if (chat.members.length <= 3) {
         return next(new Errorhandler("Group cannot have less than 3 member", 401))
     }
-    const allmembers=chat.members.map((i)=>i._id)
+    const allmembers = chat.members.map((i) => i._id)
     chat.members = chat.members.filter((i) => i._id.toString() !== userId.toString());
 
     await chat.save()
@@ -300,11 +301,12 @@ const removeMember = Trycatch(async (req: Request, res: Response, next: NextFunc
         req,
         ALERT,
         chat.members,
-        {chatId:chatid,message:`${userthatwillberemoved.name} ko is group se hta diya gya`
-  }
+        {
+            chatId: chatid, message: `${userthatwillberemoved.name} ko is group se hta diya gya`
+        }
     );
 
-    emitEvent(req,REFETCH_CHATS,allmembers)
+    emitEvent(req, REFETCH_CHATS, allmembers)
 
     return res.status(200).json({ success: true, message: "member removed successfully" })
 })
@@ -333,7 +335,7 @@ const leavefromgrp = Trycatch(async (req: Request, res: Response, next: NextFunc
         ALERT,
         chat.members,
         {
-            chatId:chatid,message:`${user.name} ne group left kar diya`
+            chatId: chatid, message: `${user.name} ne group left kar diya`
 
         }
     )
@@ -342,24 +344,24 @@ const leavefromgrp = Trycatch(async (req: Request, res: Response, next: NextFunc
 })
 
 const sendattachments = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
-  
+
     const { chatid } = req.body;
-   
+
     const [chat, me] = await Promise.all([Chat.findById(chatid), User.findById(req.user, "name")])
-   
+
     if (!chat)
         return next(new Errorhandler("Chat not found", 404));
-   
+
     const files: Array<any> = Array.isArray(req.files) ? req.files : [];
-    
-   
+
+
     if (files.length < 1)
         return next(new Errorhandler("Provide attachements", 400));
-    if(files.length >5)
-            return next(new Errorhandler("files should be between 1-5",400))
-    
+    if (files.length > 5)
+        return next(new Errorhandler("files should be between 1-5", 400))
+
     const attachments: Array<any> = await uploadfilesoncloudinary(files)
-    
+
     const messageforrealtime = {
         content: "", attachments, sender: {
             _id: me._id,
@@ -370,16 +372,16 @@ const sendattachments = Trycatch(async (req: Request, res: Response, next: NextF
         content: "", attachments, sender: me._id, chatid
     }
     const message = await Message.create(messagefordb)
-    
+
     emitEvent(req, NEW_MESSAGE, chat.members, {
         message: messageforrealtime,
         chatid
     })
     emitEvent(req, NEW_MESSAGES_ALERT, chat.members, {
-        chatId:chatid
-        
+        chatId: chatid
+
     })
-    
+
     return res.status(200).json({ success: true, message })
 
 })
@@ -397,28 +399,28 @@ const getchatdetails = Trycatch(async (req: Request, res: Response, next: NextFu
         const chat = await Chat.findById(req.params.id).populate("members", "name avatar");
         if (!chat)
             return next(new Errorhandler("Chat not found", 404));
-       const members: chatmembers[] = chat.members.map(({ _id ,name, avatar }:any) => ({ _id, name, avatar: avatar.url })) || [];
-       return res.status(200).json({
-        success:true,
-        chat:{
-            ...chat.toObject(),members
-        }
-       })
+        const members: chatmembers[] = chat.members.map(({ _id, name, avatar }: any) => ({ _id, name, avatar: avatar.url })) || [];
+        return res.status(200).json({
+            success: true,
+            chat: {
+                ...chat.toObject(), members
+            }
+        })
     }
-    else{
-        const chat=await Chat.findById(req.params.id);
-        if(!chat)
-            return next(new Errorhandler("Chat not found",404));
-        return res.status(200).json({success:true,chat})
+    else {
+        const chat = await Chat.findById(req.params.id);
+        if (!chat)
+            return next(new Errorhandler("Chat not found", 404));
+        return res.status(200).json({ success: true, chat })
     }
 });
 
-const renamegroup=Trycatch(async (req: Request, res: Response, next: NextFunction) => {
-    const chatid=req.params.id;
-    const {name}=req.body
-    if(!name)
-        return next(new Errorhandler("provide some name",400))
-    const chat=await Chat.findById(chatid);
+const renamegroup = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
+    const chatid = req.params.id;
+    const { name } = req.body
+    if (!name)
+        return next(new Errorhandler("provide some name", 400))
+    const chat = await Chat.findById(chatid);
     if (!chat) {
         return next(new Errorhandler("No such chat exist", 404))
     }
@@ -426,74 +428,177 @@ const renamegroup=Trycatch(async (req: Request, res: Response, next: NextFunctio
         return next(new Errorhandler("This chat is not a group", 402));
     if (chat.creater.toString() !== req.user?.toString())
         return next(new Errorhandler("you are not allowed to change name", 403));
-    chat.name=name;
+    chat.name = name;
     await chat.save();
-    emitEvent(req,REFETCH_CHATS,chat.members)
-    return res.status(200).json({success:true,message:`group name changed to ${name}`})
-    
+    emitEvent(req, REFETCH_CHATS, chat.members)
+    return res.status(200).json({ success: true, message: `group name changed to ${name}` })
+
 
 })
 
-const deletechat=Trycatch(async (req: Request, res: Response, next: NextFunction) => {
+const deletechat = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
 
-    const  chatid=req.params.id;
-    const userid=new mongoose.Types.ObjectId(req.user)
-    const chat=await Chat.findById(chatid);
-    const members=chat?.members||[]
-    if(!chat)
-        return next(new Errorhandler("Chat not found",404));
-    if(chat.groupchat && chat.creater.toString()!==req.user?.toString()){
-        return next(new Errorhandler("You are not allowed to delete group",400));
+    const chatid = req.params.id;
+    const userid = new mongoose.Types.ObjectId(req.user)
+    const chat = await Chat.findById(chatid);
+    const members = chat?.members || []
+    if (!chat)
+        return next(new Errorhandler("Chat not found", 404));
+    if (chat.groupchat && chat.creater.toString() !== req.user?.toString()) {
+        return next(new Errorhandler("You are not allowed to delete group", 400));
 
     }
-    if(!chat.groupchat && !chat.members.includes(userid))
-        return next(new Errorhandler("You are not part of this",400));
+    if (!chat.groupchat && !chat.members.includes(userid))
+        return next(new Errorhandler("You are not part of this", 400));
 
-    
-    const messagewithAttachments=await Message.find({chatid,attachments:{$exists:true,$ne:[]}});
-    const public_ids:Array<any>=[];
-    messagewithAttachments.forEach((message: IMessage)=>{
-        message.attachments.forEach((attachment)=>{public_ids.push(attachment.public_id)})
+
+    const messagewithAttachments = await Message.find({ chatid, attachments: { $exists: true, $ne: [] } });
+    const public_ids: Array<any> = [];
+    messagewithAttachments.forEach((message: IMessage) => {
+        message.attachments.forEach((attachment) => { public_ids.push(attachment.public_id) })
     }
     );
     await Promise.all([
         deletefilesfromcloudinary(public_ids),
         chat.deleteOne(),
-        Message.deleteMany({chatid})
-        
+        Message.deleteMany({ chatid })
+
     ])
-    emitEvent(req,REFETCH_CHATS,members);
-    return res.status(200).json({success:true,message:"chat deleted successfully"})
+    emitEvent(req, REFETCH_CHATS, members);
+    return res.status(200).json({ success: true, message: "chat deleted successfully" })
 
 })
 
-const getmessages=Trycatch(async (req: Request, res: Response, next: NextFunction) => {
-    const chatid=req.params.id;
-    const page=(req.query.page as string)||"1";
-    const limit=20;
-    const requserid=req.user||""
-    const skip:number=(parseInt(page)-1)*(limit);
-   
-    const chat=await Chat.findById(chatid);
-    if(!chat ) return next(new Errorhandler("Chat not found",400))
-    if(!chat.members.includes(new mongoose.Types.ObjectId(requserid))) 
-        return next(new Errorhandler("You are not allowed to access this",401))
-        
-    const [messages,totalmessages]=await Promise.all([
-        Message.find({chatid:new mongoose.Types.ObjectId(chatid) })
-        .sort({createdAt:-1})    
-        .skip(skip)
-        .limit(limit)
-        .populate("sender","name")
-        .lean(),
-        Message.countDocuments({chatid:new mongoose.Types.ObjectId(chatid)})
+const getmessages = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
+    const chatid = req.params.id;
+    const page = (req.query.page as string) || "1";
+    const limit = 20;
+    const requserid = req.user || ""
+    const skip: number = (parseInt(page) - 1) * (limit);
+
+    const chat = await Chat.findById(chatid);
+    if (!chat) return next(new Errorhandler("Chat not found", 400))
+    if (!chat.members.includes(new mongoose.Types.ObjectId(requserid)))
+        return next(new Errorhandler("You are not allowed to access this", 401))
+
+    const [messages, totalmessages] = await Promise.all([
+        Message.find({ chatid: new mongoose.Types.ObjectId(chatid) })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate("sender", "name")
+            .lean(),
+        Message.countDocuments({ chatid: new mongoose.Types.ObjectId(chatid) })
     ])
+
+    const totalpages = Math.ceil(totalmessages / limit) || 0;
+
+    return res.status(200).json({ success: true, messages: messages.reverse(), totalpages })
+
+
+})
+
+const GetSmartReply = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
+    const { conversations,sendername } = req.body;
+
+    if (!Array.isArray(conversations) || conversations.length === 0) {
+        return res.status(400).json({ error: 'Invalid or empty conversation array.' });
+    }
+ 
+    const buildPrompt = (chatHistory: string,senderName: string) => `
+      You are a smart reply suggestion assistant for **group chats**.
+      
+      ---
+      
+      👤 You are "${senderName}" — a real person participating in this conversation. The rest are other group members.
+      
+      ---
+      
+      🧠 Your Job:
+      
+      1. Read the **entire conversation** (latest message is at the end).
+      2. Then:
+         - Find the **most recent message NOT sent by You** → generate smart **replies** to it.
+         - Find the **most recent message sent by You** → generate **continuations** from it.
+        -If you did not found any **most recent message NOT sent by You** then **most recent message NOT sent by You** is **most recent message sent by You**
+        similarly if you did not found **most recent message sent by You** then **most recent message sent by You** is **most recent message NOT sent by You**
+      
+      ---
+      
+      🎨 For both replies and continuations, generate **3 unique suggestions** for each of the following styles:
+      
+      - 💖 Romantic – flirty, sweet, expressive,like babu-sona types.
+      - 🔥 Savage – bold, blunt, savage.
+      - 🙂 Normal – simple, friendly, casual.
+      - 😂 Funny – meme-worthy, Gen-Z, witty.
+      - 🙃 Sarcastic – dry humor, ironic, cheeky.
+      - 😎 Cool – confident, influencer-style, bold one-liners.
+      - 🤬 Vulgar- raw, no-filter. Multiple **Abusive** word should be included in hinglish.
+      
+      ---
+      
+      📌 Guidelines:
+      - Read the **whole conversation** for tone, context, and language (English / Hindi / Hinglish).
+      - Replies should match the **emotion and language** of the message they are responding to.
+      - Continuations should feel **natural**, like you're carrying your last message forward.
+      - **Do NOT repeat the same suggestion across styles** — each must be clearly different and fit the tone.
+      - Use Atleast One **emojis**, slang, or even **light insults** (in Savage/Funny mode) if context supports it — but keep it realistic.
+      - Don’t explain anything — just output the JSON.
+      
+      ---
+      
+      📦 Response Format:
+      {
+        "replyTo": "<latest message from someone else or fallback>",
+        "replies": {
+          "romantic": ["...", "...", "..."],
+          "savage": ["...", "...", "..."],
+          "normal": ["...", "...", "..."],
+          "funny": ["...", "...", "..."],
+          "sarcastic": ["...", "...", "..."],
+          "cool": ["...", "...", "..."],
+          "vulgur": ["...", "...", "..."]
+        },
+        "continueFrom": "<latest message from You or fallback>",
+        "continuations": {
+          "romantic": ["...", "...", "..."],
+          "savage": ["...", "...", "..."],
+          "normal": ["...", "...", "..."],
+          "funny": ["...", "...", "..."],
+          "sarcastic": ["...", "...", "..."],
+          "cool": ["...", "...", "..."],
+          "vulgur": ["...", "...", "..."]
+        }
+      }
+      
+      ---
+      
+      💬 Chat History:
+      ${chatHistory}
+      
+      Now analyze the chat and generate reply and continuation suggestions — making each style different, creative, and tone-accurate.
+      `.trim();
+    const chatHistory = conversations.map(c => `${  c.sender}: ${c.message}`).join('\n'); 
+    let reply;
+    try {
+        const prompt = buildPrompt(chatHistory,sendername);
+        const response = await groq.chat.completions.create({
+                messages: [
+                    { role: 'system', content: 'You are a smart reply suggestion assistant for chat conversations.' },
+                    { role: 'user', content: prompt },
+                        ],
+                    model: "llama-3.3-70b-versatile",
+                    temperature:0.90,
+                    });
+           
+        reply=JSON5.parse(response.choices[0].message.content?.replace(/^```json\s*/i, '')?.replace(/^```\s*/i, '')?.replace(/```$/, '')?.trim() as string)  
+    } catch (error) {
+        console.error('Smart reply generation failed:', error);
+        return next(new Errorhandler("Smart Reply generation Failed",500))
+    }
     
-    const totalpages=Math.ceil(totalmessages/limit) ||0;
+    return res.json({smartReply:reply,message:"Smart Replies generated"}).status(200);
 
-    return res.status(200).json({success:true,messages:messages.reverse(),totalpages})
-
-
-})  
-export { addMembers, deletechat, getchatdetails, getmessages, getMyChats, getMyGrps, leavefromgrp, newGrpChat, removeMember, renamegroup, sendattachments };
+})
+export { addMembers, deletechat, getchatdetails, getmessages, getMyChats, getMyGrps, leavefromgrp, newGrpChat, removeMember, renamegroup, sendattachments, GetSmartReply };
 

@@ -42,6 +42,10 @@ const userschema=new Schema<IUser>({
         type:String,
         required:false
     },
+    allowAutoReply:{
+        type:Boolean,
+        default:false
+    },
     resetPasswordToken:{
         type:String,
         required:false,

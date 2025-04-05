@@ -257,9 +257,26 @@ const getmyfriends = Trycatch(async (req: Request, res: Response, next: NextFunc
     }
     else return res.status(200).json({ success: true, friends })
 
+})
 
-
-
+const AllowAutoPlay=Trycatch(async(req:Request,res:Response,next:NextFunction)=>{
+    const {userid}=req.params;
+    if(!userid)
+        return  next(new Errorhandler(" UserId is missing", 400));
+    const user=await User.findByIdAndUpdate(userid,{$set:{allowAutoReply:true}},{new:true})
+    if(!user)
+        return  next(new Errorhandler("User Not Exists", 400));
+    return res.json({message:"Auto Reply is Enabled"}).status(200);
+})
+const DisableAutoReply=Trycatch(async(req:Request,res:Response,next:NextFunction)=>{
+    const {userid}=req.params;
+    if(!userid)
+        return  next(new Errorhandler(" UserId is missing", 400));
+    const user=await User.findByIdAndUpdate(userid,{$set:{allowAutoReply:false}},{new:true})
+    
+    if(!user)
+        return  next(new Errorhandler("User Not Exists", 400));
+    return res.json({message:"Auto Reply is Disabled"}).status(200);
 })
 export {
     login,
@@ -272,5 +289,7 @@ export {
     sendfriendrequest,
     acceptfriendrequest,
     getmynotifications,
-    getmyfriends
+    getmyfriends,
+    AllowAutoPlay,
+    DisableAutoReply
 }

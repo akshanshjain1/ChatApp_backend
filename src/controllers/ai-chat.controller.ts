@@ -12,10 +12,10 @@ dotenv.config()
 const ai = new GoogleGenAI({ apiKey: `${process.env.GOOGLE_GEMINI_API}` });
 
 const openai = new OpenAI({
-    baseURL: 'https://openrouter.ai/api/v1', // Ensure correct base URL
+    baseURL: 'https://openrouter.ai/api/v1', 
     apiKey: `${process.env.DEEPSEEK_API_KEY}`
 });
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 
 
@@ -44,7 +44,7 @@ async function classifyPrompt(session: any, prompt: string) {
 
 
     const result = await (response.text?.slice(7).slice(0, -3)) as string;
-    
+
     try {
         return JSON.parse(result);
     } catch (error) {
@@ -181,7 +181,7 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
     if (categories.includes("image")) {
         try {
             const imageResponse = await generateImage(prompt);
-            
+
             const urlRegex = /(https?:\/\/[^\s]+)/g;
 
 
@@ -192,7 +192,7 @@ async function chatbotResponse(session: any, prompt: string, categories: string[
     }
 
 
-    if ((categories.includes("conversation") ) || categories.length === 0 || ( !categories.includes("image"))) {
+    if ((categories.includes("conversation")) || categories.length === 0 || (!categories.includes("image"))) {
         try {
 
             const response = await groq.chat.completions.create({

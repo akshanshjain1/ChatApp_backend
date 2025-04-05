@@ -45,6 +45,7 @@ export interface IUser extends Document{
         url:string
     },
     bio?:string,
+    allowAutoReply?:boolean,
     resetPasswordToken?:string,
     resetPasswordTokenExpiry?:string,
     
