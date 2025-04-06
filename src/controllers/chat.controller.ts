@@ -499,13 +499,13 @@ const getmessages = Trycatch(async (req: Request, res: Response, next: NextFunct
 })
 
 const GetSmartReply = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
-    const { conversations,sendername } = req.body;
+    const { conversations, sendername } = req.body;
 
     if (!Array.isArray(conversations) || conversations.length === 0) {
         return res.status(400).json({ error: 'Invalid or empty conversation array.' });
     }
- 
-    const buildPrompt = (chatHistory: string,senderName: string) => `
+
+    const buildPrompt = (chatHistory: string, senderName: string) => `
       You are a smart reply suggestion assistant for **group chats**.
       
       ---
@@ -518,11 +518,11 @@ const GetSmartReply = Trycatch(async (req: Request, res: Response, next: NextFun
       
       1. Read the **entire conversation** (latest message is at the end).
       2. Then:
-         - Find the **most recent message NOT sent by You** → generate smart **replies** to it.
-         - Find the **most recent message sent by You** → generate **continuations** from it.
-        -If you did not found any **most recent message NOT sent by You** then **most recent message NOT sent by You** is **most recent message sent by You**
-        similarly if you did not found **most recent message sent by You** then **most recent message sent by You** is **most recent message NOT sent by You**
-      
+         - Find the **most recent message NOT sent by You("${senderName}")** → generate smart **replies** to it.
+         - Find the **most recent message sent by You("${senderName}")** → generate **continuations** from it.
+        -If and Only If you did not found any  **most recent message NOT sent by You** then **most recent message NOT sent by You** is **most recent message sent by You**
+        similarly if and only if you did not found **most recent message sent by You** then **most recent message sent by You** is **most recent message NOT sent by You**.Read all the conversation very carefully for deciding this.I hope no mistakes will be made from you in detecting the most recent messages which are sent by You("${senderName}") and most recent message which is NOT sent by You("${senderName}") means message which is sent by somebody else.
+        **format of Chat History is  {senderName:Message}**.So analyse accordingly.**Do not include name**  in replies
       ---
       
       🎨 For both replies and continuations, generate **3 unique suggestions** for each of the following styles:
@@ -533,7 +533,7 @@ const GetSmartReply = Trycatch(async (req: Request, res: Response, next: NextFun
       - 😂 Funny – meme-worthy, Gen-Z, witty.
       - 🙃 Sarcastic – dry humor, ironic, cheeky.
       - 😎 Cool – confident, influencer-style, bold one-liners.
-      - 🤬 Vulgar- raw, no-filter. Multiple **Abusive** word should be included in hinglish.
+      - 🤬 Vulgar- raw, no-filter. Multiple **Abusive** word **should** be there anyhow  in hinglish.
       
       ---
       
@@ -578,26 +578,56 @@ const GetSmartReply = Trycatch(async (req: Request, res: Response, next: NextFun
       
       Now analyze the chat and generate reply and continuation suggestions — making each style different, creative, and tone-accurate.
       `.trim();
-    const chatHistory = conversations.map(c => `${  c.sender}: ${c.message}`).join('\n'); 
+    const chatHistory = conversations.map(c => `${c.sender}: ${c.message}`).join('\n');
     let reply;
-    try {
-        const prompt = buildPrompt(chatHistory,sendername);
-        const response = await groq.chat.completions.create({
+    let prompt = buildPrompt(chatHistory, sendername);;
+     try {
+            const response = await groq.chat.completions.create({
                 messages: [
                     { role: 'system', content: 'You are a smart reply suggestion assistant for chat conversations.' },
                     { role: 'user', content: prompt },
-                        ],
-                    model: "llama-3.3-70b-versatile",
-                    temperature:0.90,
-                    });
+                ],
+                model: "llama-3.3-70b-versatile",
+                temperature: 0.75,
+            });
            
-        reply=JSON5.parse(response.choices[0].message.content?.replace(/^```json\s*/i, '')?.replace(/^```\s*/i, '')?.replace(/```$/, '')?.trim() as string)  
-    } catch (error) {
-        console.error('Smart reply generation failed:', error);
-        return next(new Errorhandler("Smart Reply generation Failed",500))
-    }
-    
-    return res.json({smartReply:reply,message:"Smart Replies generated"}).status(200);
+            reply = JSON5.parse(response.choices[0].message.content?.replace(/^```json\s*/i, '')?.replace(/^```\s*/i, '')?.replace(/```$/, '')?.trim() as string);
+        }
+        catch (error) {
+            try {
+                const response = await groq.chat.completions.create({
+                    messages: [
+                        { role: 'system', content: 'You are a smart reply suggestion assistant for chat conversations.' },
+                        { role: 'user', content: prompt },
+                    ],
+                    model: "llama-3.3-70b-specdec",
+                    temperature: 0.75,
+                });
+                
+                reply = JSON5.parse(response.choices[0].message.content?.replace(/^```json\s*/i, '')?.replace(/^```\s*/i, '')?.replace(/```$/, '')?.trim() as string);
+            }
+            catch (error) {
+                try {
+                    const response = await groq.chat.completions.create({
+                        messages: [
+                            { role: 'system', content: 'You are a smart reply suggestion assistant for chat conversations.' },
+                            { role: 'user', content: prompt },
+                        ],
+                        model: "gemma2-9b-it",
+                        temperature: 0.75,
+                    });
+                    
+                    
+                    reply = JSON5.parse(response.choices[0].message.content?.replace(/^```json\s*/i, '')?.replace(/^```\s*/i, '')?.replace(/```$/, '')?.trim() as string);
+                }
+                catch (error) {
+                    console.error('Smart reply generation failed:', error);
+                    return next(new Errorhandler("Smart Reply generation Failed", 500));
+                }
+            }
+        }
+
+    return res.json({ smartReply: reply, message: "Smart Replies generated" }).status(200);
 
 })
 export { addMembers, deletechat, getchatdetails, getmessages, getMyChats, getMyGrps, leavefromgrp, newGrpChat, removeMember, renamegroup, sendattachments, GetSmartReply };
