@@ -1,5 +1,5 @@
 import express from "express";
-import { getMyProfile, login, logout, newuser, searchuser,sendfriendrequest ,acceptfriendrequest,getmynotifications, getmyfriends, authlogin, forgotPassword, resetPassword, AllowAutoPlay, DisableAutoReply} from "../controllers/user.controller.js";
+import { getMyProfile, login, logout, newuser, searchuser,sendfriendrequest ,acceptfriendrequest,getmynotifications, getmyfriends, authlogin, forgotPassword, resetPassword, AllowAutoPlay, DisableAutoReply, hasFCMtoken, saveFCMtoken} from "../controllers/user.controller.js";
 import { singleavatar } from "../middlewares/multer.js";
 import { isauthenticated } from "../middlewares/auth.js";
 import { acceptfriendrequestvalidator, authLoginvalidater, forgotpasswordvalidator, loginvalidator, registervalidator, resetpasswordvalidator, sendfriendrequestvalidator, validate } from "../lib/validators.js";
@@ -13,6 +13,8 @@ router.route("/forgot-password").post(forgotpasswordvalidator(),validate,forgotP
 router.route("/reset-password").post(resetpasswordvalidator(),validate,resetPassword)
 router.use(isauthenticated)
 router.route('/me').get(getMyProfile)
+router.route("/has-fcm-token").get(hasFCMtoken)
+router.route("/save-fcm-token").post(saveFCMtoken)
 router.route('/logout').post(logout)
 router.route('/search').get(searchuser)
 

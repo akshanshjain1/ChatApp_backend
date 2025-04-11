@@ -52,10 +52,11 @@ const login = Trycatch(async (req: Request<{}, {}, loginrequestbody>, res: Respo
         return next(new Errorhandler('Please Reset Password to login manually', 402))
 
     const ismatch = await compare(password, user.password);
-
+   
+   
     if (!ismatch)
         return next(new Errorhandler('Invalid Credentials', 400))
-
+   
     sendToken(res, user, 201, `Welcome Back ${user.name}`)
 })
 
@@ -91,8 +92,9 @@ const authlogin = Trycatch(async (req: Request<{}, {}, authloginrequestbody>, re
         sendToken(res, newUser, 201, "User Created")
 
     }
-    else
-        sendToken(res, user, 201, `Welcome Back ${user.name}`)
+    else{
+        
+        sendToken(res, user, 201, `Welcome Back ${user.name}`)}
 
 })
 
@@ -155,6 +157,7 @@ const getMyProfile = Trycatch(async (req: Request, res: Response, next: NextFunc
 
 const logout = Trycatch(async (req: Request, res: Response, next: NextFunction) => {
     const UserId = req.user;
+    await User.findByIdAndUpdate(UserId,{$set:{fcmToken:null}});
     return res.status(200).cookie("accesstoken", "", { ...cookieoption, maxAge: 0 }).json({ message: "Logout Successfully " })
 })
 
@@ -278,6 +281,27 @@ const DisableAutoReply=Trycatch(async(req:Request,res:Response,next:NextFunction
         return  next(new Errorhandler("User Not Exists", 400));
     return res.json({message:"Auto Reply is Disabled"}).status(200);
 })
+
+const hasFCMtoken=Trycatch(async(req:Request,res:Response,next:NextFunction)=>{
+   
+    const {userId}=req.query;
+    
+    const user=await User.findById(userId);
+
+    if(!user)
+        return next(new Errorhandler("User not Exists",400));
+    if(!user.fcmToken)
+        return res.json({message:"No FCM-Token found",hasToken:false}).status(200);
+    return res.json({message:"Token found",hasToken:true}).status(200);
+})
+const saveFCMtoken=Trycatch(async(req:Request,res:Response,next:NextFunction)=>{
+    const {token,userId}=req.body;
+    const user=await User.findByIdAndUpdate(userId,{$set:{fcmToken:token}},{new:true});
+    if(!user)
+        return next (new Errorhandler("User Not Exists",400));
+
+    return res.json({message:"FCM Token Set"}).status(200);
+})
 export {
     login,
     authlogin,
@@ -291,5 +315,7 @@ export {
     getmynotifications,
     getmyfriends,
     AllowAutoPlay,
-    DisableAutoReply
+    DisableAutoReply,
+    hasFCMtoken,
+    saveFCMtoken
 }

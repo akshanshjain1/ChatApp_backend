@@ -48,6 +48,7 @@ export interface IUser extends Document{
     allowAutoReply?:boolean,
     resetPasswordToken?:string,
     resetPasswordTokenExpiry?:string,
+    fcmToken?:string
     
 }
 

@@ -53,6 +53,10 @@ const userschema=new Schema<IUser>({
     resetPasswordTokenExpiry:{
         type:String,
         required:false,
+    },
+    fcmToken:{
+        type:String,
+        default:null
     }
    
 

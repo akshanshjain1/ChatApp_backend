@@ -11,6 +11,7 @@ import { v4 as uuid } from 'uuid'
 import { corsoption } from "./constants/config.js"
 import { errorMiddleware } from "./middlewares/error.js"
 import { connectdb } from "./utils/features.js"
+import {admin} from "./config/firebaseAdmin.js"
 dotenv.config({
     path: './.env'
 })
@@ -39,6 +40,7 @@ app.set("io",io)
 app.use(cors(corsoption ))
 app.use(express.json())
 app.use(cookieParser())
+
 app.use((req, res, next) => {
     res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
@@ -106,11 +108,17 @@ io.on("connection",(socket)=>{
 
 
     const usersocket=getSockets(members);
+    const offlineUsers = members.filter((member: any) => {
+        const userId = member.toString();
+        return !userSocketIds.has(userId);
+      });
     io.to(usersocket).emit(NEW_MESSAGE,{
         chatId,
         message:messageforrealtime
     })
     io.to(usersocket).emit(NEW_MESSAGES_ALERT,{chatId})
+
+   
 
 
     try {
@@ -118,6 +126,38 @@ io.on("connection",(socket)=>{
     } catch (error) {
         console.log(error)
     }
+    
+    const sendNotificationsToOfflineUsers = async (offlineUsers:[]) => {
+        const promises = offlineUsers.map(async(userId:any) => {
+        const user=await User.findById(userId).select("fcmToken name")
+        if(!user?.fcmToken) 
+             return Promise.resolve(`⚠️ Skipped ${user?.name || userId}, no FCM token`);
+        const payload = {
+            notification: {
+              title: `${messageforrealtime.sender.name}`,
+              body: `📩 ${messageforrealtime.content}\n🔗 Open Chat: ${process.env.CLIENT_URL}/chat/${chatId}`,
+            },
+            data: {
+              link: `${process.env.CLIENT_URL}/chat/${chatId}`,
+            },
+            token: user.fcmToken,
+          };
+          
+          
+      
+          return admin.messaging().send(payload)
+            .then((response) => {
+              
+            })
+            .catch((err) => {
+              console.error( err.message);
+            });
+        });
+       
+        await Promise.all(promises);
+      
+      };
+    await sendNotificationsToOfflineUsers(offlineUsers)
     }
     
 )
