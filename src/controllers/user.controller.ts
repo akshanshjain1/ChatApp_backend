@@ -56,6 +56,8 @@ const login = Trycatch(async (req: Request<{}, {}, loginrequestbody>, res: Respo
    
     if (!ismatch)
         return next(new Errorhandler('Invalid Credentials', 400))
+
+    await User.findByIdAndUpdate(user._id,{$set:{fcmToken:null}})
    
     sendToken(res, user, 201, `Welcome Back ${user.name}`)
 })
@@ -93,7 +95,7 @@ const authlogin = Trycatch(async (req: Request<{}, {}, authloginrequestbody>, re
 
     }
     else{
-        
+        await User.findByIdAndUpdate(user._id,{$set:{fcmToken:null}})
         sendToken(res, user, 201, `Welcome Back ${user.name}`)}
 
 })
@@ -292,7 +294,7 @@ const hasFCMtoken=Trycatch(async(req:Request,res:Response,next:NextFunction)=>{
         return next(new Errorhandler("User not Exists",400));
     if(!user.fcmToken)
         return res.json({message:"No FCM-Token found",hasToken:false}).status(200);
-    return res.json({message:"Token found",hasToken:true}).status(200);
+    return res.json({message:"Token found",hasToken:true,token:user.fcmToken}).status(200);
 })
 const saveFCMtoken=Trycatch(async(req:Request,res:Response,next:NextFunction)=>{
     const {token,userId}=req.body;

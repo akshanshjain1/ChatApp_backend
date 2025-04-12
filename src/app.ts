@@ -126,18 +126,20 @@ io.on("connection",(socket)=>{
     } catch (error) {
         console.log(error)
     }
-    
+   
     const sendNotificationsToOfflineUsers = async (offlineUsers:[]) => {
         const promises = offlineUsers.map(async(userId:any) => {
         const user=await User.findById(userId).select("fcmToken name")
+        
         if(!user?.fcmToken) 
              return Promise.resolve(`⚠️ Skipped ${user?.name || userId}, no FCM token`);
+
         const payload = {
-            notification: {
-              title: `${messageforrealtime.sender.name}`,
-              body: `📩 ${messageforrealtime.content}\n🔗 Open Chat: ${process.env.CLIENT_URL}/chat/${chatId}`,
-            },
             data: {
+              title: `${messageforrealtime.sender.name}`,
+              body: `📩 ${messageforrealtime.content}\n🔗 Tap to Open Chat`,
+            
+             
               link: `${process.env.CLIENT_URL}/chat/${chatId}`,
             },
             token: user.fcmToken,
@@ -149,8 +151,9 @@ io.on("connection",(socket)=>{
             .then((response) => {
               
             })
-            .catch((err) => {
-              console.error( err.message);
+            .catch(async(err) => {
+                await User.findByIdAndUpdate(userId,{$set:{fcmToken:null}})
+                console.error(err.message);
             });
         });
        
@@ -282,7 +285,7 @@ io.on("connection",(socket)=>{
     })
     socket.on('disconnect',()=>{
         
-        userSocketIds.delete(user._id)
+        userSocketIds.delete(user._id.toString())
         onlineusers.delete(user._id.toString())
         socket.broadcast.emit(ONLINE_USERS,Array.from(onlineusers))
     })
