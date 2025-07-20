@@ -533,7 +533,7 @@ const GetSmartReply = Trycatch(async (req: Request, res: Response, next: NextFun
       - 😂 Funny – meme-worthy, Gen-Z, witty.
       - 🙃 Sarcastic – dry humor, ironic, cheeky.
       - 😎 Cool – confident, influencer-style, bold one-liners.
-      - 🤬 Vulgar- raw, no-filter. Multiple **Abusive** word **should** be there anyhow  in hinglish.
+      - 🤬 Vulgar- raw, with little anger but in limit.
       
       ---
       
@@ -626,6 +626,7 @@ const GetSmartReply = Trycatch(async (req: Request, res: Response, next: NextFun
                 }
             }
         }
+    
 
     return res.json({ smartReply: reply, message: "Smart Replies generated" }).status(200);
 
